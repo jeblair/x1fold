@@ -1,0 +1,10 @@
+[Unit]
+Description=Tablet mode switch
+
+[Service]
+ExecStart=/usr/local/bin/tablet-mode
+User=root
+Group=root
+
+[Install]
+WantedBy=multi-user.target

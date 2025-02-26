@@ -1,0 +1,56 @@
+#!/usr/bin/env python3
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+import time
+import signal
+
+from gi.repository import GLib
+import dbus
+import dbus.service
+from dbus.mainloop.glib import DBusGMainLoop
+from evdev import UInput, ecodes as e
+
+OPATH = "/org/probos/TabletMode"
+IFACE = "org.probos.TabletMode"
+BUS_NAME = IFACE
+
+class TabletMode(dbus.service.Object):
+    def __init__(self):
+        bus = dbus.SystemBus()
+        bus.request_name(BUS_NAME)
+        bus_name = dbus.service.BusName(BUS_NAME, bus=bus)
+        super().__init__(bus_name, OPATH)
+
+        events = {e.EV_SW: [e.SW_TABLET_MODE]}
+        self.ui = UInput(events=events)
+        time.sleep(1)
+        self.ui.write(e.EV_SW, e.SW_TABLET_MODE, 1)
+        self.ui.syn()
+
+    @dbus.service.method(dbus_interface=IFACE,
+                         in_signature="b", out_signature="")
+    def SetTabletMode(self, enabled):
+        val = enabled and 1 or 0
+        self.ui.write(e.EV_SW, e.SW_TABLET_MODE, val)
+        self.ui.syn()
+
+if __name__ == "__main__":
+    DBusGMainLoop(set_as_default=True)
+    tm = TabletMode()
+    loop = GLib.MainLoop()
+    loop.run()
+
